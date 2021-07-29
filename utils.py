@@ -144,4 +144,4 @@ def load_spectrograms(fpath):
 	# Reduction.
 	#mel = mel[::hp.r, :]
 	#return fname, mel, mag
-	return fname, mel.reshape((-1, np.n_mels * hp.r)), mag
+	return fname, mel.reshape((-1, hp.n_mels * hp.r)), mag

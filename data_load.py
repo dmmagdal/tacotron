@@ -103,7 +103,11 @@ def get_batch():
 	dataset = dataset.shuffle(256)
 	dataset = dataset.padded_batch(hp.batch_size, drop_remainder=True)
 	#dataset = dataset.cache()
-	dataset = dataset.prefetch(64)
+	#dataset = dataset.prefetch(64)
+	dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+
+	print(num_batch)
+	#exit()
 
 	# Return shuffled dataset.
 	return dataset

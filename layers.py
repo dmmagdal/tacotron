@@ -230,10 +230,13 @@ class AttentionDecoder(layers.Layer):
 		if self.num_units is None:
 			self.num_units = input_shape[-1]
 
+		self.gru = layers.GRU(self.num_units, return_sequences=True)
+		self.att = layers.AdditiveAttention()
 		'''
 		self.attention_mechanism = tfa.seq2seq.BahdanauAttention(
 			self.num_units, self.memory
 		)
+		'''
 		'''
 		self.attention_mechanism = tfa.seq2seq.BahdanauAttention(
 			self.num_units
@@ -246,15 +249,26 @@ class AttentionDecoder(layers.Layer):
 			#attention_layer_size=self.num_units,
 			alignment_history=True
 		)
+		print(type(self.cell_with_attention))
+		#self.rnn_cell = layers.SimpleRNNCell(self.num_units)
+		#self.rnn = layers.StackedRNNCells(
+		#	[self.cell_with_attention, self.rnn_cell]
+		#)
 		self.rnn = layers.RNN(self.cell_with_attention) # (N, T', 16)
+		#self.rnn = tf.compat.v1.nn.dynamic_rnn(self.cell_with_attention)
+		'''
 
 
 	def call(self, inputs, memory):
-		self.attention_mechanism.setup_memory(memory)
+		#self.attention_mechanism.setup_memory(memory)
 		#return self.rnn(inputs, memory)
 		#outputs, state = self.rnn(inputs, memory)
-		outputs, state = self.rnn(inputs)
-		return outputs, state
+		#outputs, state = self.rnn(inputs)
+	
+		gru_out = self.gru(inputs)
+		outputs = self.att([memory, gru_out])
+
+		return outputs
 
 
 class Prenet(layers.Layer):
@@ -375,25 +389,35 @@ class Decoder1(layers.Layer):
 
 	def call(self, inputs, memory, training=None):
 		prenet_out = self.prenet(inputs, training=training)
+
 		#att_out, state = self.att_dec(inputs, memory)
-		att_out, state = self.att_dec(prenet_out, memory)
+		#att_out, state = self.att_dec(prenet_out, memory)
 		#att_out, state = self.att_dec((prenet_out, memory))
+		att_out = self.att_dec(prenet_out, memory)
 
 		# For attention monitoring.
+		'''
 		alignments = tf.transpose(
 			state.alignment_history.stack(), [1, 2, 0]
 		)
+		'''
 
 		decoder_out = att_out
 		#gru_out1 = self.gru1(att_out)
 		#gru_out2 = self.gru2(gru_out1)
+		print("att out shape")
+		print(decoder_out.get_shape())
 		decoder_out += self.gru1(decoder_out)
+		print("gru1 out shape")
+		print(decoder_out.get_shape())
 		decoder_out += self.gru2(decoder_out)
+		print("gru2 out shape")
+		print(decoder_out.get_shape())
 
 		#mel_hats = self.dense(gru_out2)
 		mel_hats = self.dense(decoder_out)
 
-		return mel_hats, alignments
+		return mel_hats#, alignments
 
 
 class Decoder2(layers.Layer):
@@ -460,4 +484,5 @@ class Decoder2(layers.Layer):
 
 		# Outputs => (N, T_y, 1 + n_fft // 2).
 		outputs = self.dense2(gru_out)
+
 		return outputs

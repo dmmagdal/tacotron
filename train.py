@@ -67,7 +67,10 @@ class Tacotron(tf.keras.Model):
 
 		#decoder_inputs = self.input_mel(decoder_inputs)
 		memory = self.encoder(embedding_output, training=training)
-		y_hat, alignments = self.decoder1(
+		#y_hat, alignments = self.decoder1(
+		#	decoder_inputs, memory, training=training
+		#)
+		y_hat = self.decoder1(
 			decoder_inputs, memory, training=training
 		)
 
@@ -88,6 +91,12 @@ class Tacotron(tf.keras.Model):
 			y_hat, z_hat, audio = self(
 				(texts, mels, mags), training=True
 			)
+			print("text shape {}".format(texts.get_shape()))
+			print("mel shape {}".format(mels.get_shape()))
+			print("y_hat shape {}".format(y_hat.get_shape()))
+			print("mag shape {}".format(mags.get_shape()))
+			print("z_hat shape {}".format(z_hat.get_shape()))
+			print("audio shape {}".format(audio.get_shape()))
 
 			# Loss.
 			loss1 = tf.reduce_mean(tf.abs(y_hat - mels))
