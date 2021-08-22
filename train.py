@@ -6,7 +6,7 @@ from hyperparams import Hyperparams as hp
 import tensorflow as tf
 from tqdm import tqdm
 from data_load import get_batch, load_vocab
-#from modules import *
+from model import TacoTron as tc
 #from layers import Encoder, Decoder1, Decoder2
 from layers import *
 from utils import *
@@ -35,7 +35,9 @@ class Tacotron(tf.keras.Model):
 		#self.input_text = tf.keras.layers.InputLayer(input_shape=(None,))
 		#self.input_mel = tf.keras.layers.InputLayer(input_shape=(None, hp.n_mels * hp.r))
 		#self.input_mag = tf.keras.layers.InputLayer(input_shape=(None, hp.n_fft // 2 + 1))
-		self.embedding = EmbeddingLayer(len(hp.vocab), hp.embed_size)
+		self.embedding = EmbeddingLayer(
+			len(hp.vocab), hp.embed_size, input_shape=(None,)
+		)
 		self.encoder = Encoder(hp)
 		self.decoder1 = Decoder1(hp)
 		self.decoder2 = Decoder2(hp)
@@ -56,7 +58,7 @@ class Tacotron(tf.keras.Model):
 
 
 	def call(self, inputs, training=None):
-		text, mel, mag = inputs
+		text, mel, mags	 = inputs
 
 		#text = self.input_text(text)
 		embedding_output = self.embedding(text)
@@ -76,9 +78,9 @@ class Tacotron(tf.keras.Model):
 
 		z_hat = self.decoder2(y_hat, training=training)
 
-		audio = tf.py_function(spectrogram2wav, [z_hat[0]], tf.float32)
+		#audio = tf.py_function(spectrogram2wav, [z_hat[0]], tf.float32)
 
-		return y_hat, z_hat, audio
+		return y_hat, z_hat#, audio
 
 
 	def train_step(self, data):
@@ -88,7 +90,10 @@ class Tacotron(tf.keras.Model):
 
 		with tf.GradientTape() as tape:
 			# Feed forward in training mode.
-			y_hat, z_hat, audio = self(
+			#y_hat, z_hat, audio = self(
+			#	(texts, mels, mags), training=True
+			#)
+			y_hat, z_hat = self(
 				(texts, mels, mags), training=True
 			)
 			print("text shape {}".format(texts.get_shape()))
@@ -96,7 +101,7 @@ class Tacotron(tf.keras.Model):
 			print("y_hat shape {}".format(y_hat.get_shape()))
 			print("mag shape {}".format(mags.get_shape()))
 			print("z_hat shape {}".format(z_hat.get_shape()))
-			print("audio shape {}".format(audio.get_shape()))
+			#print("audio shape {}".format(audio.get_shape()))
 
 			# Loss.
 			loss1 = tf.reduce_mean(tf.abs(y_hat - mels))
@@ -118,15 +123,31 @@ class Tacotron(tf.keras.Model):
 		return {m.name: m.result() for m in self.metrics}
 
 
+	'''
+	def build(self):
+		fake_text = tf.zeros((None, None,), dtype=tf.float32)
+		fake_mel = tf.zeros((None, None, hp.n_mels * hp.r), dtype=tf.float32)
+		#fake_text = tf.zeros((None, None,), dtype=tf.float32)
+		self((texts, mels), training=False)
+		return
+	'''
+
+
 optimizer = tf.keras.optimizers.Adam(lr=hp.lr)
 #'''
 model = Tacotron()
 model.compile(optimizer=optimizer, metrics=["accuracy"])
-data = get_batch()
-#model.build()
-model.fit(data, epochs=5)
-model.summary()
+data, num_batch = get_batch()
 #'''
+model.build(input_shape=[
+	(None, None,), 
+	(None, None, hp.n_mels * hp.r), 
+	(None, None, hp.n_fft // 2 + 1)
+	]
+)
+
+model.summary()
+model.fit(data, epochs=5)
 
 '''
 text_in = tf.keras.Input(shape=(None,), dtype=tf.int32)

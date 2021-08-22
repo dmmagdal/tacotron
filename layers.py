@@ -206,7 +206,7 @@ class GRULayer(layers.Layer):
 				self.gru_fw, merge_mode=None
 			)
 		else:
-			self.rnn = layers.RNN(self.gru_cell)
+			self.rnn = layers.RNN(self.gru_cell, return_sequences=True)
 
 
 	def call(self, inputs, training):
@@ -405,14 +405,14 @@ class Decoder1(layers.Layer):
 		decoder_out = att_out
 		#gru_out1 = self.gru1(att_out)
 		#gru_out2 = self.gru2(gru_out1)
-		print("att out shape")
-		print(decoder_out.get_shape())
+		#print("att out shape")
+		#print(decoder_out.get_shape())
 		decoder_out += self.gru1(decoder_out)
-		print("gru1 out shape")
-		print(decoder_out.get_shape())
+		#print("gru1 out shape")
+		#print(decoder_out.get_shape())
 		decoder_out += self.gru2(decoder_out)
-		print("gru2 out shape")
-		print(decoder_out.get_shape())
+		#print("gru2 out shape")
+		#print(decoder_out.get_shape())
 
 		#mel_hats = self.dense(gru_out2)
 		mel_hats = self.dense(decoder_out)
@@ -462,7 +462,7 @@ class Decoder2(layers.Layer):
 
 
 	def call(self, inputs, training=None):
-		inputs = tf.reshape(inputs, [inputs.get_shape()[0], -1, self.hp.n_mels])
+		inputs = tf.reshape(inputs, [tf.shape(inputs)[0], -1, self.hp.n_mels])
 		conv1d_bank_out = self.conv1d_banks(inputs, training=training)
 		max_pool_out = self.max_pool(conv1d_bank_out)
 

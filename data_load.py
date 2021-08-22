@@ -106,11 +106,8 @@ def get_batch():
 	#dataset = dataset.prefetch(64)
 	dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
-	print(num_batch)
-	#exit()
-
 	# Return shuffled dataset.
-	return dataset
+	return dataset, num_batch
 
 
 def get_spectrograms(fpath, text_length, text):

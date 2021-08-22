@@ -200,10 +200,67 @@ class Graph:
 		pass
 
 
+class TacoTron(Model):
+	def __init__(self, input_hp=None):
+		if input_hp is None:
+			self.hp = hp
+		else:
+			self.hp = input_hp
+
+		self.embed = EmbeddingLayer(len(self.hp.vocab), self.hp.embed_size)
+		self.encoder = Encoder(self.hp)
+		self.decoder1 = Decoder1(self.hp)
+		self.decoder2 = Decoder2(self.hp)
 
 
-def text2mel_loss():
-	pass
+	def call(self, inputs, training=False):
+		# Unpack inputs.
+		text, mel = inputs
+
+		# Get encoder/decoder inputs.
+		encoder_inputs = self.embed(text) # (N, T_x, E)
+		decoder_inputs = tf.concat(
+			(tf.zeros_like(mel[:, :1, :]), mel[:, :-1, :]), 1
+		) # (N, Ty/r, n_mels*r)
+		decoder_inputs = decoder_inputs[:, :, -self.hp.n_mels] # feed last frames only (N, Ty/r, n_mels)
+
+		# Pass through networks.
+		memory = self.encoder(encoder_inputs, training=training) # (N, T_x, E)
+		y_hat, alignments = self.decoder1(
+			decoder_inputs, memory, training=training
+		) # (N, T_y//r, n_mels*r)
+		z_hat = self.decoder2(y_hat, training=training) # (N, T_y//r, (1+n_fft//2)*r)
+
+		return y_hat, alignments, z_hat
+
+
+	@tf.function
+	def train_step(self, data):
+		# Unpack data. Structure depends on the model and on what was
+		# passed to fit().
+		fnames, texts, mels, mags = data
+
+		with tf.GradientTape() as tape:
+			# Feed forward in training mode.
+			y_pred, alignments, z_pred = self((texts, mels), training=True)
+
+			# Total loss.
+			loss1 = tf.reduce_mean(tf.abs(y_pred - mels))
+			loss2 = tf.reduce_mean(tf.abs(z_pred - mags))
+			loss = loss1 + loss2
+
+		# Compute gradients.
+		trainable_vars = self.trainable_variables
+		gradients = tape.gradient(loss, trainable_vars)
+
+		# Update weights.
+		self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+
+		# Update metrics (includes the metrics that tracks the loss).
+		self.compiled_metrics.update_state(mels, y_pred)
+
+		# Return a dict mapping metric names to current value.
+		return {m.name: m.result() for m in self.metrics}
 
 
 class Text2Mel(Model):
