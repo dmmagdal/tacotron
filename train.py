@@ -58,7 +58,7 @@ class Tacotron(tf.keras.Model):
 
 
 	def call(self, inputs, training=None):
-		text, mel, mags	 = inputs
+		text, mel, mags	= inputs
 
 		#text = self.input_text(text)
 		embedding_output = self.embedding(text)

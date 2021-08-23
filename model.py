@@ -136,9 +136,6 @@ class Graph:
 					global_step=self.global_step
 				)
 
-
-<<<<<<< HEAD
-
 		self.textEnc = TextEncoder(hp)
 		self.audioEnc = AudioEncoder(hp)
 		self.attention = Attention(hp)
@@ -264,10 +261,7 @@ class TacoTron(Model):
 		return {m.name: m.result() for m in self.metrics}
 
 
-class Text2Mel(Model):
-=======
 class Tacotron(Model):
->>>>>>> b2bbff8d6786f23ce9a15fd250ffea5271981236
 	def __init__(self, input_hp=None):
 		super(Tacotron, self).__init__()
 
@@ -295,7 +289,7 @@ class Tacotron(Model):
 		decoder_in = tf.concat(
 			(tf.zeros_like(mel[:, :1, :]), mel[:, :-1, :]), 1
 		)
-		decoder_in = decoder_in[:, :, -self.hp.n_mels]
+		decoder_in = decoder_in[:, :, -self.hp.n_mels:]
 
 		memory = self.encoder(embedding_out, training=training)
 		y = self.decoder1(decoder_in, memory, training=training)
