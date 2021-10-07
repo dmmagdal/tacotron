@@ -5,7 +5,7 @@ import os
 from hyperparams import Hyperparams as hp
 import tensorflow as tf
 from tqdm import tqdm
-from data_load import get_batch, load_vocab
+from data_load import get_batch, load_vocab, get_batch_new, TextMelCollate
 from model import TacoTron as tc
 #from layers import Encoder, Decoder1, Decoder2
 from layers import *
@@ -87,6 +87,15 @@ class Tacotron(tf.keras.Model):
 		# Unpack data. Structure depends on the model and on what was
 		# passed to fit().
 		fnames, texts, mels, mags = data
+		'''
+		fnames, texts, mels, mags, max_text_len, max_mel_len,\
+			max_mag_len = data
+
+		textmelcollate = TextMelCollate(
+			1, max_text_len, max_mel_len, max_mag_len
+		)
+		texts, mels, mags, = textmelcollate([texts, mels, mags])
+		'''
 
 		with tf.GradientTape() as tape:
 			# Feed forward in training mode.
@@ -137,12 +146,17 @@ optimizer = tf.keras.optimizers.Adam(lr=hp.lr)
 #'''
 model = Tacotron()
 model.compile(optimizer=optimizer, metrics=["accuracy"])
-data, num_batch = get_batch()
+#data, num_batch = get_batch()
+data, num_batch = get_batch_new()
+
 #'''
 model.build(input_shape=[
 	(None, None,), 
 	(None, None, hp.n_mels * hp.r), 
-	(None, None, hp.n_fft // 2 + 1)
+	(None, None, hp.n_fft // 2 + 1),
+	#(None,),
+	#(None,),
+	#(None,),
 	]
 )
 

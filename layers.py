@@ -217,6 +217,63 @@ class GRULayer(layers.Layer):
 			return self.rnn(inputs)
 
 
+class AttentionLayer(layers.Layer):
+	def __init__(self, num_units=None, **kwargs):
+		super(AttentionLayer, self).__init__()
+
+		self.num_units = num_units
+
+
+	def build(self, input_shape):
+		if self.num_units is None:
+			self.num_units = input_shape[-1]
+
+		self.att_mechanism = tfa.seq2seq.BahdanauAttention(
+			self.num_units
+		)
+		self.decoder_cell = layers.GRUCell(self.num_units)
+		self.cell_attention = tfa.seq2seq.AttentionWrapper(
+			self.decoder_cell, self.att_mechanism, self.num_units,
+			alignment_history=True
+		)
+		self.rnn = layers.RNN(self.cell_attention)
+		
+
+	def call(self, inputs, memory):
+		self.att_mechanism.setup_memory(memory)
+		outputs, state = self.cell_attention(
+			inputs, self.cell_attention.get_initial_state(inputs)
+		)
+		
+		return outputs, state
+
+
+class AttentionRNN(layers.Layer):
+	def __init__(self, num_units=None, **kwargs):
+		super(AttentionRNN, self).__init__()
+
+		self.num_units = num_units
+
+
+	def build(self, input_shape):
+		if self.num_units is None:
+			self.num_units = input_shape[-1]
+
+		self.gru = layers.GRUCell(
+			self.num_units, return_sequences=True, return_states=True
+		)
+		self.att = layers.AdditiveAttention()
+		
+
+	def call(self, inputs, states):
+		inputs, memory = inputs
+
+		gru_out, states = self.gru(inputs, states)
+		outputs = self.att([memory, gru_out])
+
+		return outputs
+
+
 class AttentionDecoder(layers.Layer):
 	#def __init__(self, memory, num_units=None, **kwargs):
 	def __init__(self, num_units=None, **kwargs):
@@ -401,6 +458,10 @@ class Decoder1(layers.Layer):
 			state.alignment_history.stack(), [1, 2, 0]
 		)
 		'''
+		#print("Att output shape {}".format(att_out.get_shape()))
+		#print("Context vector shape {}".format(memory.get_shape()))
+		#att_out = tf.concat([att_out, memory], axis=1)
+		#att_out = layers.Concatenate(axis=1)([att_out, memory])
 
 		decoder_out = att_out
 		#gru_out1 = self.gru1(att_out)
