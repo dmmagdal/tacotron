@@ -10,7 +10,7 @@ import tensorflow_addons as tfa
 from tqdm import tqdm
 from data_load import get_batch, load_vocab
 from layers import Prenet, EmbeddingLayer, Conv1DBanks, Conv1DLayer
-from layers import GRULayer, HighwayNet
+from layers import GRULayer, HighwayNet, BatchNorm
 from utils import *
 
 
@@ -113,7 +113,7 @@ class Decoder(tf.keras.Model):
 		self.dense = layers.Dense(hp.n_mels * hp.r)
 
 		# Sampler.
-		self.sampler = tfa.seq2seq.sampler.TraningSampler()
+		self.sampler = tfa.seq2seq.sampler.TrainingSampler()
 
 		# Attention mechanism (with memory None).
 		self.attention_mech = self.build_attention_mechanism(
@@ -141,7 +141,7 @@ class Decoder(tf.keras.Model):
 	def build_rnn_cell(self, num_units):
 		return tfa.seq2seq.AttentionWrapper(
 			self.rnn_cell, self.attention_mech, 
-			attenion_layer_size=num_units
+			attention_layer_size=num_units
 		)
 
 
@@ -173,7 +173,7 @@ class PostNet(tf.keras.Model):
 			filters=hp.embed_size // 2, size=3
 		) # (N, T_x, E/2)
 		self.batch_norm1 = BatchNorm(activation="relu")
-		self.conv1d_proj2 = Conv1DLayer( filters=hp.n_mels, size=3) # (N, T_x, E/2)
+		self.conv1d_proj2 = Conv1DLayer(filters=hp.n_mels, size=3) # (N, T_x, E/2)
 		self.batch_norm2 = BatchNorm()
 
 		# Extra affine transformation for dimensionality sync.
@@ -281,7 +281,7 @@ class Tacotron(tf.keras.Model):
 
 optimizer = tf.keras.optimizers.Adam(lr=hp.lr)
 #'''
-model = Tacotron()
+model = Tacotron(hp, 1024)
 model.compile(optimizer=optimizer, metrics=["accuracy"])
 data, num_batch = get_batch()
 

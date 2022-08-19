@@ -328,6 +328,33 @@ class AttentionDecoder(layers.Layer):
 		return outputs
 
 
+'''
+class AttentionDecoder(layers.AbstractRNNCell):
+	def __init__(self, num_units=None, **kwargs):
+		super(AttentionDecoder, self).__init__()
+
+		self.num_units = num_units
+
+
+	def build(self, input_shape):
+		if self.num_units is None:
+			self.num_units = input_shape[-1]
+
+		self.attention_mech = tfa.seq2seq.BahdanauAttention(
+			self.num_units, None
+		)
+		self.cell = layers.GRUCell(self.num_units)
+		self.attention = tfa.seq2seq.AttentionWrapper(
+			self.cell, self.attention_mech
+		)
+		self.bidirect = layers.Bidirectional(self.attention)
+
+
+	def call(self, inputs, state, training=None):
+		self.att_mechanism
+'''
+
+
 class Prenet(layers.Layer):
 	def __init__(self, hp, num_units=None, **kwargs):
 		super(Prenet, self).__init__()
